@@ -1,0 +1,21 @@
+Evening Alchemist Planner — Overview
+
+Purpose
+A daily reflection and planning companion. Users talk with Praxis (AI) to process experiences, notice patterns, and connect actions to goals. Minimal UI, strong continuity over time.
+
+Key Pieces
+- Supabase-backed data model (user profiles, tasks, plans, goals)
+- AI system prompts stored in `system_prompts` (Praxis + heroes)
+- Daily chat sessions in `chat_sessions` (one per persona per day)
+- Frontend loads prompt(s), creates/loads today’s session, saves messages
+
+Why this approach
+- Prompts in DB: easy iteration without redeploys
+- Per-day sessions: supports daily cadence and retrospective pattern spotting
+- Context snapshot: capture relevant state for better responses
+
+Next steps
+- Seed more hero prompts
+- Optionally load "most recent session" instead of strictly today
+- Tighten RLS and add minimal admin tooling for prompts
+
