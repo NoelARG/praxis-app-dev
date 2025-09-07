@@ -72,7 +72,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
   const steps = [
     { id: 'welcome', title: 'Welcome to Praxis', subtitle: 'Your personal operating system for a happy and productive life.', content: WelcomeStep },
     { id: 'task-count', title: 'Task Count', subtitle: 'This helps Praxis align with your natural flow.', content: TaskCountStep },
-    { id: 'awake-window', title: 'Awake Window', subtitle: 'This helps Praxis align with your natural flow.', content: AwakeWindowStep },
+    { id: 'awake-window', title: 'Awake Window', subtitle: 'This helps Praxis align with your natural flow.', content: AwakeWindow },
     { id: 'notifications', title: 'Stay on Track', subtitle: "Praxis will send nudges when you’re most likely to use it — you stay in control.", content: NotificationsStep },
     { id: 'pillar', title: 'What matters most right now?', subtitle: 'Praxis will guide you here first.', content: PillarStep },
     { id: 'challenge', title: 'Want to build your keystone habit?', subtitle: 'The 21-day challenge helps you lock in daily rituals with Praxis.', content: ChallengeStep },
@@ -119,9 +119,11 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
   // Step Components
   function WelcomeStep() {
     return (
-      <div className="text-center space-y-6">
-        <h2 className="text-3xl font-bold text-white">Welcome to Praxis</h2>
-        <p className="text-gray-400 text-lg">Your personal operating system for a happy and productive life.</p>
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center space-y-6">
+          <h2 className="text-3xl font-bold text-white">Welcome to Praxis, {firstName}</h2>
+          <p className="text-gray-400 text-lg">Your personal operating system for a happy and productive life.</p>
+        </div>
       </div>
     );
   }
@@ -139,21 +141,26 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
             <h3 className="text-xl font-semibold">How many tasks per day?</h3>
           </div>
           <div className="space-y-4">
-            <Slider
-              value={[preferences.daily_task_count]}
-              onValueChange={([value]) => updatePreferences({ daily_task_count: value })}
-              max={6}
-              min={3}
-              step={1}
-              className="w-full"
-            />
-            <div className="mt-2 flex justify-between">
+            {/* ShadCN Slider with emerald theming */}
+            <div className="px-2">
+              <Slider
+                value={[preferences.daily_task_count]}
+                onValueChange={([value]) => updatePreferences({ daily_task_count: value })}
+                max={6}
+                min={3}
+                step={1}
+                className="w-full [&_[data-slot=slider-track]]:bg-zinc-700 [&_[data-slot=slider-range]]:bg-emerald-500 [&_[data-slot=slider-thumb]]:border-emerald-500 [&_[data-slot=slider-thumb]]:bg-white"
+              />
+            </div>
+            <div className="mt-4 flex justify-between px-1">
               {[3,4,5,6].map((n) => (
                 <button
                   key={n}
                   type="button"
                   onClick={() => updatePreferences({ daily_task_count: n })}
-                  className={`flex flex-col items-center text-xs ${preferences.daily_task_count === n ? 'text-emerald-400' : 'text-gray-400'}`}
+                  className={`flex flex-col items-center text-xs transition-colors duration-200 ${
+                    preferences.daily_task_count === n ? 'text-emerald-400' : 'text-gray-400'
+                  }`}
                 >
                   <span className={`h-3 w-0.5 ${preferences.daily_task_count === n ? 'bg-emerald-500' : 'bg-zinc-600'}`} />
                   <span className="mt-1">{n}</span>
@@ -166,7 +173,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
     );
   }
 
-  function AwakeWindowStep() {
+  function AwakeWindow() {
     const { snap, parseInput } = useSliderWithInput(30);
     const [awakeMinutes, setAwakeMinutes] = useState<[number, number]>([
       hhmmToMinutes(preferences.work_start_time),
@@ -212,7 +219,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                 <input
                   id="awake-start"
                   type="time"
-                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="mt-1 h-10 w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   step={1800}
                   value={minutesToHHMM(awakeMinutes[0])}
                   onChange={(e) => onStartInput(e.target.value)}
@@ -223,7 +230,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                 <input
                   id="awake-end"
                   type="time"
-                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="mt-1 h-10 w-full rounded-md border border-zinc-600 bg-zinc-800 px-3 py-2 text-sm text-white focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                   step={1800}
                   value={minutesToHHMM(awakeMinutes[1])}
                   onChange={(e) => onEndInput(e.target.value)}
@@ -305,17 +312,52 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
   }
 
   function ChallengeStep() {
+    const currentHour = new Date().getHours();
+    const isEvening = currentHour >= 18 || currentHour <= 6;
+    
     return (
       <div className="space-y-8">
         <div className="text-center mb-4">
           <h2 className="text-3xl font-bold text-white mb-2">Want to build your keystone habit?</h2>
           <p className="text-gray-400">The 21-day challenge helps you lock in daily rituals with Praxis.</p>
-              </div>
-        <div className="flex justify-center gap-3">
-          <Button onClick={() => { setChallengeOptIn(true); handleComplete(); }} className="bg-emerald-600 hover:bg-emerald-700">Count me in</Button>
-          <Button variant="outline" onClick={() => { setChallengeOptIn(false); handleComplete(); }} className="border-zinc-600 text-zinc-300 hover:bg-zinc-700">Maybe later</Button>
-            </div>
+        </div>
+        
+        <div className="p-6 bg-zinc-800/30 rounded-xl border border-zinc-700/50">
+          <p className="text-zinc-300 text-center mb-6">
+          </p>
+        </div>
+        
+        {/* Custom button layout for this final step */}
+        <div className="flex flex-col gap-4 pt-4">
+          <div className="flex gap-3 justify-center">
+            <Button 
+              onClick={() => setChallengeOptIn(true)}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-2"
+            >
+              Count me in
+            </Button>
+            <Button 
+              onClick={() => setChallengeOptIn(false)}
+              className="bg-zinc-600 hover:bg-zinc-700 text-zinc-200 hover:text-zinc-200 border-0 px-8 py-2"
+            >
+              Maybe later
+            </Button>
           </div>
+          
+          {/* Back button with no background hover */}
+          <div className="flex justify-center">
+          <Button 
+  onClick={handleBack}
+  className="bg-transparent hover:bg-transparent text-zinc-500 hover:text-zinc-300 border-0 shadow-none hover:shadow-none"
+  style={{ color: 'rgb(113 113 122)' }} // zinc-500
+  onMouseEnter={(e) => e.currentTarget.style.color = 'rgb(212 212 216)'} // zinc-300
+  onMouseLeave={(e) => e.currentTarget.style.color = 'rgb(113 113 122)'} // zinc-500
+>
+  Back
+</Button>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -333,8 +375,8 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
                 </div>
               </div>
               <div className="px-8 pt-6 pb-8 h-[460px]">
-                <div className="h-full flex flex-col justify-between">
-                  <div className="flex-1">
+                <div className="h-full flex flex-col">
+                  <div className="flex-1 flex items-center">
                     <WelcomeStep />
                   </div>
                   <div className="mt-6 flex items-center justify-end">
@@ -375,7 +417,7 @@ export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) =>
               </div>
               <div className="px-8 pt-6 pb-8 h-[460px]">
                 <div className="h-full flex flex-col justify-between">
-                  <div className="flex-1"><AwakeWindowStep /></div>
+                  <div className="flex-1"><AwakeWindow /></div>
                   <div className="mt-6 flex items-center justify-between">
                     <Button variant="outline" onClick={handleBack} className="bg-transparent border-zinc-600 text-zinc-300 hover:bg-zinc-800">Back</Button>
                     <Button onClick={handleNext} className="bg-emerald-500 hover:bg-emerald-600 text-white">Continue</Button>
