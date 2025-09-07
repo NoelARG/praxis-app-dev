@@ -9,7 +9,7 @@ interface OnboardingState {
   userPreferences: UserPreferences | null;
 }
 
-interface UserPreferences {
+export interface UserPreferences {
   daily_task_count: number;
   work_start_time: string;
   work_end_time: string;
@@ -25,8 +25,8 @@ interface UserPreferences {
   };
 }
 
-export const useOnboarding = (): OnboardingState & { 
-  completeOnboarding: () => void;
+export const useOnboarding = (): OnboardingState & {
+  completeOnboarding: (preferences: UserPreferences) => Promise<boolean>;
   fetchOnboardingStatus: () => Promise<void>;
 } => {
   const { user, isAuthenticated } = useAuth();
@@ -88,8 +88,36 @@ export const useOnboarding = (): OnboardingState & {
     }
   };
 
-  const completeOnboarding = () => {
-    setIsCompleted(true);
+  const completeOnboarding = async (preferences: UserPreferences): Promise<boolean> => {
+    if (!isAuthenticated || !user) {
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          onboarding_completed: true,
+          daily_task_count: preferences.daily_task_count,
+          work_start_time: preferences.work_start_time,
+          work_end_time: preferences.work_end_time,
+          notification_preferences: preferences.notification_preferences,
+          productivity_preferences: preferences.productivity_preferences,
+        })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error completing onboarding:', error);
+        return false;
+      }
+
+      setIsCompleted(true);
+      setUserPreferences(preferences);
+      return true;
+    } catch (err) {
+      console.error('Unexpected error completing onboarding:', err);
+      return false;
+    }
   };
 
   useEffect(() => {

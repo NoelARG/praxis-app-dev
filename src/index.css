@@ -15,7 +15,8 @@
     --popover: 24 24 27;
     --popover-foreground: 244 244 245;
 
-    --primary: 244 244 245;
+    /* Emerald brand */
+    --primary: 164 95% 34%;
     --primary-foreground: 24 24 27;
 
     --secondary: 39 39 42;
@@ -32,7 +33,7 @@
 
     --border: 63 63 70;
     --input: 63 63 70;
-    --ring: transparent; /* Removed focus rings entirely */
+    --ring: 164 95% 34%;
 
     --radius: 0.375rem;
 
@@ -66,16 +67,7 @@
     overflow-y: scroll;
   }
 
-  /* Remove all focus rings globally */
-  input:focus,
-  textarea:focus,
-  button:focus,
-  select:focus,
-  [tabindex]:focus {
-    outline: none !important;
-    box-shadow: none !important;
-    ring: none !important;
-  }
+  /* Keep visible focus rings (emerald) for accessibility */
 
   /* Override sidebar transition colors to prevent yellow */
   [data-sidebar="menu-button"] {
