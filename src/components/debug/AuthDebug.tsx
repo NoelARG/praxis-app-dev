@@ -25,53 +25,7 @@ export const AuthDebug: React.FC = () => {
     );
   }
 
-  const testEdgeFunction = async () => {
-    try {
-      console.log('Testing edge function call...');
-      const response = await fetch('https://ubhowoetpnratmhcugik.supabase.co/functions/v1/n8n-task-proxy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViaG93b2V0cG5yYXRtaGN1Z2lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNTU2ODEsImV4cCI6MjA2NTgzMTY4MX0.Dgt_AchRH8yyH2r24FWS6oSmj5NLUR70tp6X8dMJ-1U',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InViaG93b2V0cG5yYXRtaGN1Z2lrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyNTU2ODEsImV4cCI6MjA2NTgzMTY4MX0.Dgt_AchRH8yyH2r24FWS6oSmj5NLUR70tp6X8dMJ-1U',
-        },
-        body: JSON.stringify({
-          action: 'fetch_tasks',
-          userEmail: user?.email || 'test@test.com'
-        }),
-      });
-      
-      const result = await response.json();
-      console.log('Edge function test result:', result);
-      alert(`Edge function test: ${response.ok ? 'SUCCESS' : 'FAILED'}\nResponse: ${JSON.stringify(result, null, 2)}`);
-    } catch (error) {
-      console.error('Edge function test error:', error);
-      alert(`Edge function test ERROR: ${error.message}`);
-    }
-  };
-
-  const testDirectN8N = async () => {
-    try {
-      console.log('Testing direct N8N call...');
-      const response = await fetch('https://brinkenauto.app.n8n.cloud/webhook/task-management', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'fetch_tasks',
-          userEmail: user?.email || 'test@test.com'
-        }),
-      });
-      
-      const result = await response.json();
-      console.log('Direct N8N test result:', result);
-      alert(`Direct N8N test: ${response.ok ? 'SUCCESS' : 'FAILED'}\nResponse: ${JSON.stringify(result, null, 2)}`);
-    } catch (error) {
-      console.error('Direct N8N test error:', error);
-      alert(`Direct N8N test ERROR: ${error.message}`);
-    }
-  };
+  // Deprecated: N8N and related edge function tests have been removed
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-96">
@@ -120,22 +74,7 @@ export const AuthDebug: React.FC = () => {
           </div>
 
           <div className="space-y-2 pt-2">
-            <Button
-              onClick={testEdgeFunction}
-              size="sm"
-              className="w-full text-xs"
-              variant="outline"
-            >
-              Test Edge Function
-            </Button>
-            <Button
-              onClick={testDirectN8N}
-              size="sm"
-              className="w-full text-xs"
-              variant="outline"
-            >
-              Test Direct N8N
-            </Button>
+            {/* N8N test buttons removed */}
           </div>
         </CardContent>
       </Card>

@@ -165,6 +165,39 @@
   background-clip: text;
 }
 
+/* Subtle left-to-right shimmer glow for subtitles */
+.shimmer-glow {
+  position: relative;
+  display: inline-block;
+  color: rgb(212 212 216);
+  text-shadow: 0 0 12px rgba(16,185,129,0.08);
+  background: linear-gradient(90deg, rgba(212,212,216,1) 0%, rgba(244,244,245,1) 15%, rgba(212,212,216,1) 30%) no-repeat;
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: currentColor; /* keep text visible */
+  animation: shimmer-sweep 2.8s ease-in-out infinite;
+}
+
+@keyframes shimmer-sweep {
+  0% { background-position: -120% 0; }
+  50% { background-position: 100% 0; }
+  100% { background-position: 180% 0; }
+}
+
+/* Native time input theming (dark + white icon) */
+.time-input::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(1.4);
+  opacity: 0.9;
+}
+.time-input::-webkit-datetime-edit-hour-field,
+.time-input::-webkit-datetime-edit-minute-field,
+.time-input::-webkit-datetime-edit-ampm-field {
+  color: rgb(244 244 245);
+}
+.time-input::-webkit-datetime-edit-ampm-field { text-transform: uppercase; }
+.time-input { border-radius: 0.5rem; }
+
 /* Vertical separator with gradient fade */
 .vertical-separator {
   position: relative;

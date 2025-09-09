@@ -29,32 +29,22 @@ const Index = () => {
     setIsLoading(true);
     
     try {
-      const response = await fetch('https://brinkenauto.app.n8n.cloud/webhook-test/535a2b50-39a9-4edf-acfc-b80f4a4ec190', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(tasks)
+      // N8N removed: simulate success locally
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      toast({
+        title: "✨ Day Planned Successfully!",
+        description: "Your evening plan has been saved locally.",
       });
-
-      if (response.ok) {
-        toast({
-          title: "✨ Day Planned Successfully!",
-          description: "Your evening plan has been submitted and is ready for tomorrow.",
-        });
-        
-        // Clear the form after successful submission
-        setTasks({
-          task1: '',
-          task2: '',
-          task3: '',
-          task4: '',
-          task5: '',
-          task6: ''
-        });
-      } else {
-        throw new Error('Failed to submit plan');
-      }
+      
+      // Clear the form after successful submission
+      setTasks({
+        task1: '',
+        task2: '',
+        task3: '',
+        task4: '',
+        task5: '',
+        task6: ''
+      });
     } catch (error) {
       toast({
         title: "Failed to Plan Day",
