@@ -1,4 +1,4 @@
-import { User, Settings2 } from "lucide-react";
+ non-bolimport { User, Settings2 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 interface SettingsSidebarProps {

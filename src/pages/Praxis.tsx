@@ -1,27 +1,24 @@
-
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageShell } from '@/components/layout/PageShell';
+import { BookOpen } from 'lucide-react';
 
 const Praxis = () => {
   return (
-    <div className="h-screen bg-zinc-900 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="px-8 py-6 flex-shrink-0 bg-zinc-900">
-        <h1 className="text-2xl font-medium title-gradient">Praxis</h1>
+    <PageShell
+      title="Praxis"
+      subtitle="Philosophical Practice & Reflection"
+      subtitleIcon={BookOpen}
+    >
+      <div className="space-y-8">
+        <div className="text-center py-12">
+          <BookOpen className="w-16 h-16 text-zinc-400 mx-auto mb-4" />
+          <h2 className="text-2xl font-semibold text-zinc-300 mb-2">Praxis</h2>
+          <p className="text-zinc-500">
+            This page is under construction.
+          </p>
+        </div>
       </div>
-
-      {/* Main Content */}
-      <div className="flex-1 px-8 py-6 min-h-0 overflow-y-auto">
-        <Card className="max-w-2xl mx-auto bg-[#1F1F1F] border-zinc-700/50">
-          <CardHeader>
-            <CardTitle className="text-zinc-100">Praxis Core</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-zinc-300">Core Praxis functionality will be implemented here.</p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    </PageShell>
   );
 };
 

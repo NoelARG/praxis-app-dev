@@ -250,8 +250,8 @@ const Signup = () => {
         
         // Navigate to Today page
         setTimeout(() => {
-          console.log('🚀 Navigating to /today');
-          navigate('/today');
+          console.log('🚀 Navigating to /journal');
+          navigate('/journal');
         }, 600);
       } else {
         console.error('❌ No user returned from signUp');

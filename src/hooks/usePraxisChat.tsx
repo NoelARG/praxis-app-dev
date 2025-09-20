@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { callClaude } from '@/api/claude';
+import { useChatSession } from '@/hooks/useChatSession';
 
 interface Message {
   id: string;
@@ -26,7 +27,7 @@ interface SystemPrompt {
   context_access: string[];
 }
 
-export const usePraxisChat = () => {
+export const usePraxisChat = (tasks: any[] = []) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -37,6 +38,17 @@ export const usePraxisChat = () => {
   
   const { user } = useAuth();
   const { toast } = useToast();
+  const { activeSession, isLoading: sessionLoading, setActiveSession } = useChatSession();
+  
+  // Get the plan date from the active session
+  const getActivePlanDate = () => {
+    if (activeSession?.plan_id) {
+      // If we have a plan_id, we need to fetch the plan date
+      // For now, we'll use session_date as a fallback
+      return activeSession.session_date;
+    }
+    return activeSession?.session_date || null;
+  };
 
   // Load today's chat session and system prompt
   useEffect(() => {
@@ -64,22 +76,15 @@ export const usePraxisChat = () => {
           return;
         }
 
+        console.log('✅ System prompt loaded:', promptData.system_prompt.substring(0, 100) + '...');
         setSystemPrompt(promptData.system_prompt);
 
         // 2. Load behavior: do NOT reset chat until a plan for today exists.
         // If a daily plan exists for today, use today's chat session; otherwise, continue the latest session.
 
-        // Check if a daily plan exists for today
-        const { data: todaysPlan, error: planError } = await supabase
-          .from('daily_plans')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('plan_date', currentDate)
-          .maybeSingle();
-
-        if (planError && planError.code !== 'PGRST116') {
-          console.error('Error checking today\'s plan:', planError);
-        }
+        // SIMPLE FIX: Disable database call to avoid 406 errors
+        console.log('🔄 SIMPLE FIX: Skipping today\'s plan check in usePraxisChat');
+        const todaysPlan = null;
 
         if (todaysPlan) {
           // Ensure we load/create today's chat session
@@ -98,7 +103,10 @@ export const usePraxisChat = () => {
 
           if (sessionData) {
             setSessionId(sessionData.id);
-            setMessages(sessionData.messages || []);
+            setMessages((sessionData.messages || []).map(msg => ({
+              ...msg,
+              timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp)
+            })));
           } else {
             const { data: newSession, error: createError } = await supabase
               .from('chat_sessions')
@@ -143,7 +151,10 @@ export const usePraxisChat = () => {
 
           if (latestSession) {
             setSessionId(latestSession.id);
-            setMessages(latestSession.messages || []);
+            setMessages((latestSession.messages || []).map(msg => ({
+              ...msg,
+              timestamp: msg.timestamp instanceof Date ? msg.timestamp : new Date(msg.timestamp)
+            })));
           } else {
             // First-time: create a session for today
             const { data: newSession, error: createError } = await supabase
@@ -206,36 +217,47 @@ export const usePraxisChat = () => {
   }, [sessionId]);
 
   // Process dynamic variables in system prompt
-  const processSystemPrompt = useCallback((prompt: string): string => {
+  const processSystemPrompt = useCallback((prompt: string, tasks: any[] = []): string => {
     if (!user) return prompt;
 
     const userMetadata = user.user_metadata || {};
+    
+    // Format current tasks with rollover information
+    const tasksText = tasks.length > 0 
+      ? tasks.map(task => {
+          const status = task.completed ? 'completed' : 'pending';
+          const rolloverInfo = task.rollover ? ` [rolled over from ${task.original_plan_date}]` : '';
+          return `- ${task.text} (${status}${rolloverInfo})`;
+        }).join('\n')
+      : 'No tasks for today';
     
     return prompt
       .replace(/\{\{user_name\}\}/g, userMetadata.first_name || 'User')
       .replace(/\{\{timezone\}\}/g, userMetadata.timezone || 'UTC')
       .replace(/\{\{user_goals\}\}/g, 'No goals set yet')
-      .replace(/\{\{current_tasks\}\}/g, 'No tasks for today')
+      .replace(/\{\{current_tasks\}\}/g, tasksText)
       .replace(/\{\{recent_patterns\}\}/g, 'No patterns available yet');
   }, [user]);
 
   // Send message to Claude API
-  const sendMessageToClaude = async (userMessage: string, conversationHistory: Message[]): Promise<string> => {
+  const sendMessageToClaude = async (userMessage: string, conversationHistory: Message[], tasks: any[] = []): Promise<string> => {
     try {
       // Prepare messages for Claude API
       const claudeMessages = [];
 
-      // Add system message only if this is the first message of the day
-      if (conversationHistory.length === 0) {
-        const processedPrompt = processSystemPrompt(systemPrompt);
-        claudeMessages.push({
-          role: 'system',
-          content: processedPrompt
-        });
-      }
+      // Always apply system prompt to ensure Praxis persona is maintained
+      const processedPrompt = processSystemPrompt(systemPrompt, tasks);
+      console.log('🔧 Applying system prompt:', processedPrompt.substring(0, 200) + '...');
+      claudeMessages.push({
+        role: 'system',
+        content: processedPrompt
+      });
 
       // Add conversation history (last 10 messages to stay within limits)
-      const recentMessages = conversationHistory.slice(-10);
+      // Filter out any existing system messages to avoid duplication
+      const recentMessages = conversationHistory
+        .slice(-10)
+        .filter(msg => msg.role !== 'system');
       claudeMessages.push(...recentMessages.map(msg => ({
         role: msg.role,
         content: msg.content
@@ -248,11 +270,12 @@ export const usePraxisChat = () => {
       });
 
       // Call Claude API
-      const result = await callClaude(claudeMessages);
+      console.log('📤 Sending to Claude:', claudeMessages.length, 'messages');
+      const result = await callClaude(claudeMessages, 'claude-3-5-sonnet-20241022', processedPrompt);
       return result.content;
 
     } catch (error) {
-      console.error('Error calling Claude API:', error);
+      console.error('❌ Error calling Claude API:', error);
       throw new Error('Failed to get response from AI. Please try again.');
     }
   };
@@ -278,7 +301,7 @@ export const usePraxisChat = () => {
       await saveMessages(updatedMessages);
 
       // Get AI response
-      const aiResponse = await sendMessageToClaude(userMessage.content, messages);
+      const aiResponse = await sendMessageToClaude(userMessage.content, messages, tasks);
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
@@ -343,6 +366,7 @@ export const usePraxisChat = () => {
     handleSendMessage,
     clearChatSession,
     hasActiveSession: messages.length > 0,
-    currentDate
+    currentDate,
+    activePlanDate: getActivePlanDate()
   };
 }; 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,8 +6,10 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const PLAN_TOMORROW_KEY = 'plan-tomorrow-tasks';
+const PLAN_TOMORROW_BACKUP_KEY = 'plan-tomorrow-tasks-backup';
 
 const PlanTomorrow = () => {
   const [task1, setTask1] = useState('');
@@ -23,38 +24,65 @@ const PlanTomorrow = () => {
   const [planDay, setPlanDay] = useState<'today' | 'tomorrow'>(defaultPlanDay);
   const { toast } = useToast();
   const { user } = useAuth();
+  const navigate = useNavigate();
   // Relax typing to avoid strict schema inference issues during setup
   const db = supabase as any;
 
   // Load saved data on component mount
   useEffect(() => {
+    console.log('🚀 PlanTomorrow component mounted - checking for saved drafts...');
+    
     const savedTasks = sessionStorage.getItem(PLAN_TOMORROW_KEY);
-    if (savedTasks) {
+    const backupTasks = localStorage.getItem(PLAN_TOMORROW_BACKUP_KEY);
+    
+    console.log('🔄 Loading saved tasks from session storage:', savedTasks);
+    console.log('🔄 Loading backup tasks from localStorage:', backupTasks);
+    
+    // Try session storage first, then localStorage as backup
+    const tasksToLoad = savedTasks || backupTasks;
+    
+    if (tasksToLoad) {
       try {
-        const parsed = JSON.parse(savedTasks);
-        setTask1(parsed.task1 || '');
-        setTask2(parsed.task2 || '');
-        setTask3(parsed.task3 || '');
-        setTask4(parsed.task4 || '');
-        setTask5(parsed.task5 || '');
-        setTask6(parsed.task6 || '');
+        const parsed = JSON.parse(tasksToLoad);
+        console.log('📋 Parsed saved tasks:', parsed);
+        
+        // Only restore if we have at least one task with content
+        const hasContent = Object.values(parsed).some((value: any) => value && value.toString().trim() !== '');
+        
+        if (hasContent) {
+          console.log('✅ Restoring saved tasks');
+          setTask1(parsed.task1 || '');
+          setTask2(parsed.task2 || '');
+          setTask3(parsed.task3 || '');
+          setTask4(parsed.task4 || '');
+          setTask5(parsed.task5 || '');
+          setTask6(parsed.task6 || '');
+        } else {
+          console.log('⚠️ Saved tasks found but no content, skipping restore');
+        }
       } catch (error) {
-        console.error('Error parsing saved plan tasks:', error);
+        console.error('❌ Error parsing saved tasks:', error);
       }
+    } else {
+      console.log('📝 No saved tasks found, starting fresh');
     }
   }, []);
 
-  // Save tasks to session storage whenever any task changes
+  // Save drafts to storage whenever tasks change
   useEffect(() => {
-    const tasksData = {
-      task1,
-      task2,
-      task3,
-      task4,
-      task5,
-      task6
-    };
-    sessionStorage.setItem(PLAN_TOMORROW_KEY, JSON.stringify(tasksData));
+    try {
+      const tasksData = {
+        task1, task2, task3, task4, task5, task6
+      };
+
+      console.log('💾 Drafts saved to session storage:', tasksData);
+      
+      // Also backup to localStorage (persists across browser sessions)
+      localStorage.setItem(PLAN_TOMORROW_BACKUP_KEY, JSON.stringify(tasksData));
+      console.log('💾 Drafts backed up to localStorage');
+    } catch (error) {
+      console.error('❌ Error saving drafts to storage:', error);
+    }
   }, [task1, task2, task3, task4, task5, task6]);
   
   const getTargetDateString = () => {
@@ -98,6 +126,7 @@ const PlanTomorrow = () => {
 
     try {
       const targetDate = getTargetDateString();
+      console.log('🎯 Saving plan for:', planDay, 'with date:', targetDate);
 
       // Ensure no existing plan for today
       const { data: existingPlan } = await db
@@ -155,15 +184,24 @@ const PlanTomorrow = () => {
       setTask5('');
       setTask6('');
       
-      // Clear from session storage
+      // Clear from both storage locations
       sessionStorage.removeItem(PLAN_TOMORROW_KEY);
+      localStorage.removeItem(PLAN_TOMORROW_BACKUP_KEY);
+      console.log('🗑️ Cleared tasks from both storage locations');
 
       console.log('Plan saved successfully, form cleared');
 
       toast({
-        title: "Plan Saved Successfully! 🎉",
-        description: "Your 6 tasks have been saved and will appear on your Today page.",
+        title: "Plan Saved Successfully!",
+        description: `Your ${tasksToInsert.length} tasks have been saved for ${planDay === 'today' ? 'today' : 'tomorrow'}. ${planDay === 'tomorrow' ? 'Redirecting to Daily Ledger...' : 'They should appear on your Today page now.'}`,
       });
+
+      // Redirect to Daily Ledger page after successful save to show confirmation
+      console.log('🔄 Redirecting to Daily Ledger...');
+      setTimeout(() => {
+        console.log('🔄 Executing navigation to /ledger');
+        navigate('/ledger', { replace: true });
+      }, 1000);
 
     } catch (error) {
       console.error('Save plan error:', error);
@@ -186,91 +224,71 @@ const PlanTomorrow = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 px-8 py-6 min-h-0 overflow-y-auto">
-        <Card className="max-w-2xl mx-auto bg-[#1F1F1F] border-zinc-700/50">
-          <CardHeader>
-            <CardTitle className="text-zinc-100">{planDay === 'today' ? "Today's" : "Tomorrow's"} 6 Priority Tasks</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Plan day toggle */}
-            <div className="flex items-center gap-2">
-              <Button type="button" variant={planDay === 'today' ? 'default' : 'outline'} className={planDay === 'today' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border-zinc-600 text-zinc-100'} onClick={() => setPlanDay('today')}>Plan for Today</Button>
-              <Button type="button" variant={planDay === 'tomorrow' ? 'default' : 'outline'} className={planDay === 'tomorrow' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'border-zinc-600 text-zinc-100'} onClick={() => setPlanDay('tomorrow')}>Plan for Tomorrow</Button>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="task1" className="text-zinc-300">Priority Task 1</Label>
-              <Input
-                id="task1"
-                value={task1}
-                onChange={(e) => setTask1(e.target.value)}
-                placeholder="Enter your first priority task..."
-                className="bg-[#313131] border-zinc-700 focus:border-zinc-600 text-zinc-100 placeholder:text-zinc-500 focus:ring-0 focus:ring-transparent"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="task2" className="text-zinc-300">Priority Task 2</Label>
-              <Input
-                id="task2"
-                value={task2}
-                onChange={(e) => setTask2(e.target.value)}
-                placeholder="Enter your second priority task..."
-                className="bg-[#313131] border-zinc-700 focus:border-zinc-600 text-zinc-100 placeholder:text-zinc-500 focus:ring-0 focus:ring-transparent"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="task3" className="text-zinc-300">Priority Task 3</Label>
-              <Input
-                id="task3"
-                value={task3}
-                onChange={(e) => setTask3(e.target.value)}
-                placeholder="Enter your third priority task..."
-                className="bg-[#313131] border-zinc-700 focus:border-zinc-600 text-zinc-100 placeholder:text-zinc-500 focus:ring-0 focus:ring-transparent"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="task4" className="text-zinc-300">Priority Task 4</Label>
-              <Input
-                id="task4"
-                value={task4}
-                onChange={(e) => setTask4(e.target.value)}
-                placeholder="Enter your fourth priority task..."
-                className="bg-[#313131] border-zinc-700 focus:border-zinc-600 text-zinc-100 placeholder:text-zinc-500 focus:ring-0 focus:ring-transparent"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="task5" className="text-zinc-300">Priority Task 5</Label>
-              <Input
-                id="task5"
-                value={task5}
-                onChange={(e) => setTask5(e.target.value)}
-                placeholder="Enter your fifth priority task..."
-                className="bg-[#313131] border-zinc-700 focus:border-zinc-600 text-zinc-100 placeholder:text-zinc-500 focus:ring-0 focus:ring-transparent"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="task6" className="text-zinc-300">Priority Task 6</Label>
-              <Input
-                id="task6"
-                value={task6}
-                onChange={(e) => setTask6(e.target.value)}
-                placeholder="Enter your sixth priority task..."
-                className="bg-[#313131] border-zinc-700 focus:border-zinc-600 text-zinc-100 placeholder:text-zinc-500 focus:ring-0 focus:ring-transparent"
-              />
-            </div>
-            
-            <Button 
+      <div className="flex-1 overflow-y-auto px-8 pb-8">
+        <div className="max-w-2xl mx-auto space-y-8">
+          {/* Plan Day Selector */}
+          <Card className="bg-zinc-800 border-zinc-700">
+            <CardHeader>
+              <CardTitle className="text-zinc-200">Planning For</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4">
+                <Button
+                  onClick={() => setPlanDay('today')}
+                  variant={planDay === 'today' ? 'default' : 'outline'}
+                  className={planDay === 'today' ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-zinc-600 text-zinc-300 hover:bg-zinc-700'}
+                >
+                  Today
+                </Button>
+                <Button
+                  onClick={() => setPlanDay('tomorrow')}
+                  variant={planDay === 'tomorrow' ? 'default' : 'outline'}
+                  className={planDay === 'tomorrow' ? 'bg-emerald-600 hover:bg-emerald-700' : 'border-zinc-600 text-zinc-300 hover:bg-zinc-700'}
+                >
+                  Tomorrow
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Task Input Form */}
+          <Card className="bg-zinc-800 border-zinc-700">
+            <CardHeader>
+              <CardTitle className="text-zinc-200">Your Tasks</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {[1, 2, 3, 4, 5, 6].map((num) => {
+                const taskState = [task1, task2, task3, task4, task5, task6][num - 1];
+                const setTaskState = [setTask1, setTask2, setTask3, setTask4, setTask5, setTask6][num - 1];
+                
+                return (
+                  <div key={num} className="space-y-2">
+                    <Label htmlFor={`task${num}`} className="text-zinc-300">
+                      Task {num}
+                    </Label>
+                    <Input
+                      id={`task${num}`}
+                      value={taskState}
+                      onChange={(e) => setTaskState(e.target.value)}
+                      placeholder={`Enter your ${num}${num === 1 ? 'st' : num === 2 ? 'nd' : num === 3 ? 'rd' : 'th'} task...`}
+                      className="bg-zinc-700 border-zinc-600 text-zinc-200 placeholder-zinc-400 focus:border-emerald-500"
+                    />
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          {/* Save Button */}
+          <div className="flex justify-center">
+            <Button
               onClick={handleSavePlan}
-              className="w-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
+              className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg"
             >
               Save Plan
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

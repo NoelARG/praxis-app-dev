@@ -23,6 +23,8 @@ export interface UserPreferences {
     show_time_estimates: boolean;
     motivational_quotes: boolean;
   };
+  primary_pillar?: string;
+  challenge_opt_in?: boolean;
 }
 
 export const useOnboarding = (): OnboardingState & {
@@ -49,7 +51,9 @@ export const useOnboarding = (): OnboardingState & {
           work_start_time,
           work_end_time,
           notification_preferences,
-          productivity_preferences
+          productivity_preferences,
+          primary_pillar,
+          challenge_opt_in
         `)
         .eq('user_id', user.id)
         .single();
@@ -76,6 +80,8 @@ export const useOnboarding = (): OnboardingState & {
               show_time_estimates: true,
               motivational_quotes: true,
             },
+            primary_pillar: profile.primary_pillar,
+            challenge_opt_in: profile.challenge_opt_in,
           });
         }
       }
@@ -103,6 +109,9 @@ export const useOnboarding = (): OnboardingState & {
           work_end_time: preferences.work_end_time,
           notification_preferences: preferences.notification_preferences,
           productivity_preferences: preferences.productivity_preferences,
+          primary_pillar: preferences.primary_pillar,
+          challenge_opt_in: preferences.challenge_opt_in,
+          updated_at: new Date().toISOString()
         })
         .eq('user_id', user.id);
 

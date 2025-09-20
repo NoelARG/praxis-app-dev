@@ -2,19 +2,31 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({
   apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY as string,
+  dangerouslyAllowBrowser: true,
 });
 
-export async function callClaude(messages: any[], model: string = 'claude-3-5-sonnet-20241022') {
+export async function callClaude(messages: any[], model: string = 'claude-3-5-sonnet-20241022', systemPrompt?: string) {
   try {
-    const response = await anthropic.messages.create({
+    // Separate system message from regular messages
+    const systemMessage = messages.find(msg => msg.role === 'system');
+    const regularMessages = messages.filter(msg => msg.role !== 'system');
+    
+    const requestParams: any = {
       model,
       max_tokens: 1000,
       temperature: 0.7,
-      messages: messages.map(msg => ({
+      messages: regularMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       }))
-    });
+    };
+    
+    // Add system prompt as top-level parameter if it exists
+    if (systemMessage || systemPrompt) {
+      requestParams.system = systemMessage?.content || systemPrompt;
+    }
+    
+    const response = await anthropic.messages.create(requestParams);
 
     // Extract text content from response blocks safely
     const blocks = Array.isArray(response.content) ? response.content : [];

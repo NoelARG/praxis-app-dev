@@ -30,6 +30,8 @@ interface UserPreferences {
     show_time_estimates: boolean;
     motivational_quotes: boolean;
   };
+  primary_pillar?: string;
+  challenge_opt_in?: boolean;
 }
 
 export const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ onComplete }) => {
@@ -326,6 +328,23 @@ function PillarStep() {
     const currentHour = new Date().getHours();
     const isEvening = currentHour >= 18 || currentHour <= 6;
     
+  const handleChallengeChoice = async (optIn: boolean) => {
+    setChallengeOptIn(optIn);
+    
+    // Complete onboarding with all preferences including pillar and challenge choice
+    const finalPreferences = {
+      ...preferences,
+      primary_pillar: primaryPillar,
+      challenge_opt_in: optIn,
+    };
+
+    await completeOnboarding(finalPreferences as HookUserPreferences);
+    
+    // Navigate to dashboard immediately
+    navigate('/dashboard');
+    onComplete && onComplete();
+  };
+    
     return (
       <div className="space-y-6">
         <div className="text-center mb-4">
@@ -335,7 +354,7 @@ function PillarStep() {
         
         <div className="p-5 bg-zinc-800/40 rounded-xl border border-emerald-500/20 shadow-[0_10px_30px_rgba(16,185,129,0.08)]">
           <div className="space-y-4 text-zinc-300">
-            <p className="text-center">Research shows it takes 21 days to form a new habit. We'll send you gentle daily check-ins to help you stay consistent with your Ivy Lee planning ritual.</p>
+            <p className="text-center">Research shows it takes 21 days to form a new habit. We'll send you gentle daily check-ins to help you stay consistent.</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <div className="rounded-lg bg-zinc-900/40 border border-zinc-700/50 p-3">
                 <div className="text-emerald-400 font-semibold mb-1">Week 1</div>
@@ -353,24 +372,22 @@ function PillarStep() {
           </div>
         </div>
         
-        {/* Custom button layout for this final step */}
-        <div className="flex flex-col gap-0 pt-4">
+        <div className="flex flex-col gap-0 pt-2">
           <div className="flex gap-3 justify-center">
             <Button 
-              onClick={() => setChallengeOptIn(true)}
+              onClick={() => handleChallengeChoice(true)}
               className="bg-emerald-500 hover:bg-emerald-600 text-white px-8 py-2"
             >
               Count me in
             </Button>
             <Button 
-              onClick={() => setChallengeOptIn(false)}
+              onClick={() => handleChallengeChoice(false)}
               className="bg-zinc-600 hover:bg-zinc-700 text-zinc-200 hover:text-zinc-200 border-0 px-8 py-2"
             >
               Maybe later
             </Button>
           </div>
           
-          {/* Back button positioned closer to the main buttons */}
           <div className="flex justify-center mt-1">
             <Button 
               onClick={handleBack}
@@ -389,7 +406,7 @@ function PillarStep() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-zinc-900/80 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-md" />
       <div className="relative w-full max-w-[720px] mx-auto">
         {/* Render per-step card */}
         {currentStep === 0 && (

@@ -58,8 +58,8 @@ const Login = () => {
         
         // Navigate after animation completes
         setTimeout(() => {
-          console.log('Navigating to /today');
-          navigate('/today');
+          console.log('Navigating to /journal');
+          navigate('/journal');
         }, 600);
       }
     } catch (error) {

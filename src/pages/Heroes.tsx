@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Users, MessageCircle, X, Send } from 'lucide-react';
 import { useOptimizedChat } from '@/hooks/useOptimizedChat';
 import { useTasks } from '@/hooks/useTasks';
+import { PageShell } from '@/components/layout/PageShell';
 
 interface Hero {
   id: string;
@@ -48,6 +49,16 @@ const EnhancedHeroChat: React.FC<EnhancedHeroChatProps> = ({
   onClearChat
 }) => {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Prevent background scrolling when popup is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -58,9 +69,31 @@ const EnhancedHeroChat: React.FC<EnhancedHeroChatProps> = ({
 
   const handleInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const target = e.target as HTMLTextAreaElement;
+    const minHeight = 48; // min-h-[48px]
+    const maxHeight = 200; // max-h-[200px]
+    
+    // Reset height first to get accurate scrollHeight
     target.style.height = 'auto';
-    target.style.height = Math.min(target.scrollHeight, 120) + 'px';
+    
+    // Check if content requires expansion AFTER reset
+    const contentRequiresExpansion = target.scrollHeight > minHeight;
+    const needsScrollbar = target.scrollHeight > maxHeight;
+    
+    // Set expanded state immediately based on accurate content size
+    setIsExpanded(contentRequiresExpansion || needsScrollbar);
+    
+    // Set final height
+    const newHeight = Math.min(Math.max(target.scrollHeight, minHeight), maxHeight);
+    target.style.height = newHeight + 'px';
   };
+
+  // Reset height when message is sent
+  useEffect(() => {
+    if (!newMessage.trim() && textareaRef.current) {
+      textareaRef.current.style.height = '48px';
+      setIsExpanded(false);
+    }
+  }, [newMessage]);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -86,10 +119,10 @@ const EnhancedHeroChat: React.FC<EnhancedHeroChatProps> = ({
       className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={handleBackdropClick}
     >
-      <div className="w-full max-w-5xl h-[85vh] bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50">
+      <div className="w-full max-w-6xl h-[90vh] bg-zinc-900 rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/50">
         {/* Hero Chat Header */}
         <div 
-          className="p-6 border-b border-zinc-700/50 relative overflow-hidden"
+          className="p-4 border-b border-zinc-700/50 relative overflow-hidden"
           style={{
             background: `linear-gradient(135deg, ${hero.primaryColor}15 0%, ${hero.accentColor}10 100%)`
           }}
@@ -163,7 +196,15 @@ const EnhancedHeroChat: React.FC<EnhancedHeroChatProps> = ({
         </div>
 
         {/* Chat Messages Area */}
-        <div className="flex-1 p-6 overflow-y-auto bg-zinc-900" style={{ height: 'calc(85vh - 220px)' }}>
+        <div 
+          className="flex-1 p-4 overflow-y-auto bg-zinc-900 hero-chat-messages" 
+          style={{ 
+            height: 'calc(90vh - 180px)',
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#52525b transparent',
+            msOverflowStyle: 'scrollbar',
+          }}
+        >
           {messages.length === 0 ? (
             <div className="text-center py-16">
               <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
@@ -288,31 +329,67 @@ const EnhancedHeroChat: React.FC<EnhancedHeroChatProps> = ({
         </div>
 
         {/* Chat Input */}
-        <div className="p-6 pb-8 border-t border-zinc-700/50 bg-zinc-900">
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onInput={handleInput}
-                placeholder={`Ask ${hero.name} for guidance...`}
-                disabled={isSendingMessage}
-                rows={1}
-                className="w-full resize-none rounded-xl border border-zinc-700 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-600 focus:ring-0 focus:outline-none px-4 py-3 pr-12 min-h-[48px] max-h-[120px] overflow-y-auto"
-                style={{
-                  scrollbarWidth: 'none',
-                  msOverflowStyle: 'none',
-                }}
-              />
-              <button
-                onClick={onSendMessage}
-                disabled={!newMessage.trim() || isSendingMessage}
-                className="absolute right-3 top-3 w-8 h-8 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-600 flex items-center justify-center transition-colors disabled:opacity-50"
-              >
-                <Send className="h-4 w-4 text-white" />
-              </button>
-            </div>
+        <div className="p-4 border-t border-zinc-700/50 bg-zinc-900">
+          <div className="relative flex items-center">
+            <textarea
+              ref={textareaRef}
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onInput={handleInput}
+              placeholder={`Ask ${hero.name} for guidance...`}
+              disabled={isSendingMessage}
+              rows={1}
+              className={`w-full resize-none border border-zinc-800 bg-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-800 focus:ring-0 focus:ring-transparent focus:outline-none px-4 py-3 pr-12 min-h-[48px] max-h-[200px] transition-[height] duration-200 ease-out ${
+                isExpanded 
+                  ? 'rounded-2xl overflow-y-auto' 
+                  : 'rounded-full overflow-hidden'
+              }`}
+              style={isExpanded ? {
+                scrollbarWidth: 'thin',
+                scrollbarColor: '#52525b transparent',
+                msOverflowStyle: 'scrollbar',
+              } : {
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
+            />
+            <style>{`
+              textarea::-webkit-scrollbar {
+                ${isExpanded ? 'display: block; width: 6px;' : 'display: none;'}
+              }
+              textarea::-webkit-scrollbar-track {
+                background: transparent;
+              }
+              textarea::-webkit-scrollbar-thumb {
+                background: #52525b;
+                border-radius: 3px;
+              }
+              textarea::-webkit-scrollbar-thumb:hover {
+                background: #71717a;
+              }
+              .hero-chat-messages::-webkit-scrollbar {
+                display: block;
+                width: 6px;
+              }
+              .hero-chat-messages::-webkit-scrollbar-track {
+                background: transparent;
+              }
+              .hero-chat-messages::-webkit-scrollbar-thumb {
+                background: #52525b;
+                border-radius: 3px;
+              }
+              .hero-chat-messages::-webkit-scrollbar-thumb:hover {
+                background: #71717a;
+              }
+            `}</style>
+            <button
+              onClick={onSendMessage}
+              disabled={!newMessage.trim() || isSendingMessage}
+              className="absolute right-2 bottom-2 w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-900 p-0 flex items-center justify-center shadow-sm border-0 transition-colors disabled:opacity-50"
+            >
+              <Send className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -353,7 +430,7 @@ const Heroes = () => {
 
   const handleHeroClick = (hero: Hero) => {
     setSelectedHero(hero);
-    console.log('Selected hero:', hero.name);
+    console.log('Selected hero:', hero.name, 'with ID:', hero.id);
   };
 
   const handleCloseChat = () => {
@@ -365,64 +442,53 @@ const Heroes = () => {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-white">
-      <div className="flex-1 flex justify-center">
-        <div className="w-full max-w-6xl px-8 py-8">
-          {/* STANDARDIZED HEADER - Same structure as other pages */}
-          <div className="mb-10">
-            <div className="flex items-start justify-between mb-6">
-              <div className="flex-1">
-                <h1 className="text-4xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent mb-2">
-                  Heroes
-                </h1>
-                <div className="flex items-center gap-2 text-gray-400 text-sm">
-                  <Users className="w-4 h-4" />
-                  <span className="text-sm">Your Personal Board of Directors</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* MAIN CONTENT */}
-          <div className="space-y-12">
+    <PageShell
+      variant="wide"
+      title="Heroes"
+      subtitle="Your Personal Board of Directors"
+      subtitleIcon={Users}
+    >
+      <div className="space-y-12">
             {/* Heroes Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {HEROES.map((hero, index) => (
                 <div
                   key={hero.id}
-                  className="group cursor-pointer animate-fade-in transform transition-all duration-300 hover:scale-105"
+                  className="group cursor-pointer animate-fade-in transition-all duration-300 ease-out hover:-translate-y-1 will-change-transform"
                   style={{ animationDelay: `${index * 100}ms` }}
                   onClick={() => handleHeroClick(hero)}
                 >
-                  <div className="bg-[#1F1F1F] border border-zinc-700/50 rounded-2xl overflow-hidden hover:border-zinc-600/60 hover:shadow-2xl transition-all duration-300 h-full relative flex flex-col">
-                    {/* Gradient overlay for theme */}
+                  <div className="bg-sidebar border border-sidebar-border rounded-2xl overflow-hidden hover:border-zinc-600/60 hover:shadow-lg transition-all duration-300 h-full relative flex flex-col isolate">
+                    {/* Subtle accent overlay for theme */}
                     <div 
-                      className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300"
+                      className="absolute inset-0 opacity-0 group-hover:opacity-3 transition-opacity duration-300 rounded-2xl"
                       style={{ 
                         background: `linear-gradient(135deg, ${hero.primaryColor} 0%, ${hero.accentColor} 100%)` 
                       }}
                     ></div>
 
                     {/* Hero Image */}
-                    <div className="aspect-square w-full relative bg-zinc-800 overflow-hidden">
-                      <img 
-                        src={hero.imageUrl} 
-                        alt={hero.name}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                    <div className="aspect-square w-full relative bg-zinc-800 overflow-hidden rounded-t-2xl">
+                      <div className="absolute inset-1 overflow-hidden rounded-t-2xl">
+                        <img 
+                          src={hero.imageUrl} 
+                          alt={hero.name}
+                          className="w-full h-full object-cover transition-all duration-300 ease-out group-hover:brightness-110"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           const container = target.parentElement!;
                           container.innerHTML = `
-                            <div class="w-full h-full bg-gradient-to-br ${hero.color} flex items-center justify-center text-white font-bold text-4xl">
+                            <div class="w-full h-full bg-gradient-to-br ${hero.color} flex items-center justify-center text-white font-bold text-4xl rounded-t-2xl">
                               ${hero.name.split(' ').map(n => n[0]).join('')}
                             </div>
                           `;
                         }}
-                      />
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-300"></div>
+                        />
+                      </div>
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-200 ease-out rounded-t-2xl"></div>
                       
                       {/* Floating chat indicator */}
-                      <div className="absolute top-4 right-4 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <div className="absolute top-4 right-4 w-10 h-10 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out">
                         <MessageCircle className="w-5 h-5 text-white" />
                       </div>
                     </div>
@@ -478,8 +544,6 @@ const Heroes = () => {
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
       {/* Enhanced Chat Modal */}
       {selectedHero && (
@@ -494,13 +558,13 @@ const Heroes = () => {
           onClearChat={handleClearChat}
         />
       )}
-    </div>
+    </PageShell>
   );
 };
 
 const HEROES: Hero[] = [
   {
-    id: 'charlie-munger',
+    id: 'charlie_munger',
     name: 'Charlie Munger',
     title: 'Investment Sage',
     era: '1924-2023',
@@ -511,10 +575,10 @@ const HEROES: Hero[] = [
     primaryColor: 'rgb(71, 85, 105)',
     accentColor: 'rgb(100, 116, 139)',
     quote: "The big money is not in the buying and selling, but in the waiting.",
-    background: 'A legendary investor who emphasized the power of compound thinking and mental models.'
+    background: 'A legendary investor who emphasized the power of compound thinking and mental models. Digital recreation.'
   },
   {
-    id: 'leonardo-davinci',
+    id: 'leonardo_davinci',
     name: 'Leonardo da Vinci',
     title: 'Renaissance Polymath',
     era: '1452-1519',
@@ -525,10 +589,10 @@ const HEROES: Hero[] = [
     primaryColor: 'rgb(71, 85, 105)',
     accentColor: 'rgb(100, 116, 139)',
     quote: "Learning never exhausts the mind.",
-    background: 'The archetype of the Renaissance genius, blending art and science with boundless curiosity.'
+    background: 'The archetype of the Renaissance genius, blending art and science with boundless curiosity. Digital recreation.'
   },
   {
-    id: 'marcus-aurelius',
+    id: 'marcus_aurelius',
     name: 'Marcus Aurelius',
     title: 'Philosopher Emperor',
     era: '121-180 AD',
@@ -539,10 +603,10 @@ const HEROES: Hero[] = [
     primaryColor: 'rgb(71, 85, 105)',
     accentColor: 'rgb(100, 116, 139)',
     quote: "You have power over your mind - not outside events. Realize this, and you will find strength.",
-    background: 'The last of the Five Good Emperors, whose personal writings became a masterpiece of philosophy.'
+    background: 'The last of the Five Good Emperors, whose personal writings became a masterpiece of philosophy. Digital recreation.'
   },
   {
-    id: 'andrew-carnegie',
+    id: 'andrew_carnegie',
     name: 'Andrew Carnegie',
     title: 'Steel Magnate',
     era: '1835-1919',
@@ -553,10 +617,10 @@ const HEROES: Hero[] = [
     primaryColor: 'rgb(71, 85, 105)',
     accentColor: 'rgb(100, 116, 139)',
     quote: "The man who dies rich dies disgraced.",
-    background: 'A self-made industrialist who revolutionized philanthropy and believed in giving back.'
+    background: 'A self-made industrialist who revolutionized philanthropy and believed in giving back. Digital recreation.'
   },
   {
-    id: 'steve-jobs',
+    id: 'steve_jobs',
     name: 'Steve Jobs',
     title: 'Innovation Visionary',
     era: '1955-2011',
@@ -567,10 +631,10 @@ const HEROES: Hero[] = [
     primaryColor: 'rgb(71, 85, 105)',
     accentColor: 'rgb(100, 116, 139)',
     quote: "Innovation distinguishes between a leader and a follower.",
-    background: 'A perfectionist who transformed multiple industries through elegant design and user experience.'
+    background: 'A perfectionist who transformed multiple industries through elegant design and user experience. Digital recreation.'
   },
   {
-    id: 'henry-ford',
+    id: 'henry_ford',
     name: 'Henry Ford',
     title: 'Industrial Revolutionary',
     era: '1863-1947',
@@ -581,7 +645,7 @@ const HEROES: Hero[] = [
     primaryColor: 'rgb(71, 85, 105)',
     accentColor: 'rgb(100, 116, 139)',
     quote: "Whether you think you can or you think you can't, you're right.",
-    background: 'An industrialist who democratized the automobile and pioneered modern manufacturing.'
+    background: 'An industrialist who democratized the automobile and pioneered modern manufacturing. Digital recreation.'
   }
 ];
 
